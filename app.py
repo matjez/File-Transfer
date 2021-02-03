@@ -1,13 +1,37 @@
 import json
 import socket
 import sys
+import os
 import random
 import string
 import datetime
 import time
-from glob import glob
+import glob
 
 from threading import Thread
+
+import stat
+import win32api, win32con
+from pathlib import Path
+
+
+def get_drives_letters():
+
+    if os.name == "nt":
+
+        
+
+        drives = win32api.GetLogicalDriveStrings()
+        drives = drives.split('\000')[:-1]
+
+        # i = 0
+        # for drive in drives:
+        #     drives[i] = drive[:-1] + "/"
+
+        #     i+=1
+    
+
+        return drives
 
 
 class FileReceiver:
@@ -18,6 +42,8 @@ class FileReceiver:
 
         self.connections = {}
         self.current_directiory = ""
+        self.directories = []
+        self.list_of_paths = []
 
     def key_generator(self):
 
@@ -51,9 +77,34 @@ class FileReceiver:
                 self.connections[connection][0].close()
                 del self.connections[connection]
     
-    def get_directory(self):
+    def get_directory(self,path):
 
-        return glob('C:\\')
+        if path == "back" and len(self.list_of_paths) > 1:
+                print("jeden")
+                self.list_of_paths.pop()
+            
+        elif len(path) > 0:
+                print("dwa")
+                self.list_of_paths.append(path)       
+                     
+        else:
+            print("trzy")
+            self.list_of_paths = []
+            self.directories = get_drives_letters()
+            return str(self.directories)
+
+        print(self.list_of_paths)
+
+        files = glob.glob(self.list_of_paths[-1]+r"\\*")
+        self.directories = []
+
+        for f in files:
+            if bool(os.stat(f).st_file_attributes & stat.FILE_ATTRIBUTE_HIDDEN) == False:
+                self.directories.append(f)
+
+        self.directories = [os.path.normpath(i) for i in self.directories]
+
+        return str(self.directories)
 
     def accept_connections(self,address,hostname):
 
@@ -99,19 +150,52 @@ class FileReceiver:
 
         print("1111")
         while True:
+
             try:
                 print("2222")
                 received = client_socket.recv(1024)
                 received = received.decode()
+
                 print("asddsa")
-                if received == "directory":
-                    print("wyslano sciezke")
-                    directory = str(self.get_directory())
+                if received[:9] == "directory":
+
+                    print("tetet",received)
+                    directory = self.get_directory(received[9:])
                     send_back_socket.send(str.encode(directory))
+
+                    
+                elif received[:5] == "files":
+
+                    list_paths = list(received[5:])
+
+                    for p in list_paths:
+
+                        total = 0
+                        file_size = client_socket.recv(1024)
+                        file_size = file_size.decode()
+
+                        send_back_socket.send(str.encode("next"))
+
+                        with open(p,"wb") as f:
+
+                            while True:
+                                print("tutu")
+                                recvfile = client_socket.recv(1024)
+
+                                print(recvfile)
+                                if file_size == total: 
+                                    print("break")
+                                    break
+                                total = total + len(recvfile)
+
+
+                                f.write(recvfile)
+                            print("koniec")
+
                 else:
                     send_back_socket.send(str.encode("test-test"))
 
-            except Exception as e:
+            except Exception as e: 
                 print("tutaj 2",e)
                 client_socket.close()
                 send_back_socket.close()
@@ -156,36 +240,68 @@ class FileSender:
             host_file = json.loads(host_file.read())
             return host_file
 
-    def send_files(self):
+    def send_files(self,file_paths):
 
 
+        self.s.send(str.encode("files"+str(file_paths)))
 
-        try:
-            self.s.send(str.encode(x))
+        for f_path in file_paths:
 
-            while True:
-                print("tototot")
+            filesize = str(os.path.getsize(f_path))
+            self.s.send(str.encode(filesize))
+            self.sc.recv(1024)
+                                             # zrobic tak zeby najouerw wyslac wielkosc pliku
 
-                string = self.sc.recv(1024)
-                print(string)
-                break
-        except Exception as e:
-            self.s.close()
-            self.receive_socket.close()
-            print(e)
+            with open("F:\\test.txt","rb") as f:  # Zmienic pozniej na f path
+
+                sendfile = f.read(1024)
+                while sendfile:
+                    self.s.send(sendfile)
+                    print('Sent ')
+                    sendfile = f.read(1024)
+                
+                self.s.send(b"DONE")
+
+                print("DONE")
+                    
+
+
             
+    """                
+    def send_files(self,file_paths):
 
-    def get_directories(self,chocen_directory):
+
+        for _ in len(files_paths):
+            try:
+                self.s.send(str.encode(x))
+
+                while True:
+                    print("tototot")
+
+                    string = self.sc.recv(1024)
+                    print(string)
+                    break
+            except Exception as e:
+                self.s.close()
+                self.receive_socket.close()
+                print(e)
+    """                
+
+    def get_directories(self,chosen_directory):
 
         # zrobic zeby mozna bylo dluzsze robic xD
 
         try:
-            self.s.send(str.encode("directory"))
+            to_send = "directory"+chosen_directory
+            print(to_send)
+            print(to_send)
+            print(to_send)
+            self.s.send(str.encode(to_send))
 
 
             while True:
                 string = self.sc.recv(1024)
-                print(string)
+                print(string.decode())
                 break
 
         except Exception as e:
@@ -225,7 +341,6 @@ class FileSender:
     def print_hosts(self):
         print(self.host_list)
 
-        
 
 while True:
 
@@ -233,12 +348,12 @@ while True:
     print("2. Połącz z serwerem")
 
 
-
-    
     receive = FileReceiver()
 
     address = "192.168.8.1"
     hostname = "Komputer 1"
+
+    file_paths = ["xtest1.txt","xtest2.txt","xtest3.txt"]
 
     x = input(": ")
 
@@ -248,23 +363,24 @@ while True:
     elif(x == "2"):
 
         send = FileSender()
-
+        send.get_directories("")
+        
         while True:
 
             print(" ")
             print("1. Ścieżka plików")
             print("2. Wyślij pliki")
-            
+            print("3. Pobierz pliki")
+
             x = input("Wybierz: ")
 
-            
             if(x == "1"):
                 print("")
-                print(send.current_directiory)
-                x = input("path: ")
-                send.get_directories(x)
-            
+                path = input("path: ")
+                print(x)
+                send.get_directories(path)
+
             elif(x == "2"):
                 x = input()
-                send.send_files()
+                send.send_files(file_paths)
             
