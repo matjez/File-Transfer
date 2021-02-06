@@ -7,17 +7,49 @@ from kivy.uix.textinput import TextInput
 from kivy.config import Config
 from kivy.core.window import Window
 from subprocess import Popen, PIPE
+from kivy.lang import Builder
+import kivy.properties as kyprops
+from kivy.uix.scrollview import ScrollView
 
 from app import FileTransfer
+
+
+# Builder.load_string("""
+
+# <RemotePaths>:
+#     spacing: 50
+#     size_hint_y: 1
+#     size_hint_x: 1
+#     height: 100
+
+#     ScrollView:
+#         do_scroll_x: False
+#         do_scroll_y: True
+        
+#         GridLayout:
+#             orientation: "vertical"
+#             size_hint_y: None
+#             height: self.minimum_height
+#             padding: 50, 50, 50, 50
+# <Row>:
+#     spacing: 50
+#     size_hint_y: None
+#     size_hint_x: 1
+#     height: 100
+# """)
+
+
+
 
 class MainFrame(GridLayout):
 
     def __init__(self, **kwargs):
         super(MainFrame, self).__init__(**kwargs)
 
+        self.mode = "client"
+
         self.transfer_app = FileTransfer()
 
-        self.transfer_app.print_hosts()        
         self.cols = 2
         self.rows = 2
 
@@ -94,15 +126,16 @@ class MainFrame(GridLayout):
         self.right_lower_grid_layout = GridLayout()
         
         self.right_lower_grid_layout.cols = 1
-        self.right_lower_grid_layout.rows = 2
-        self.right_lower_grid_layout.size_hint = (1, 1)
+        self.right_lower_grid_layout.size_hint = (1, 1) # co to robi
 
         self.add_widget(self.right_lower_grid_layout)
 
-        self.files_manage_bar = BoxLayout()
-        self.files_manage_bar.size_hint = (1, None)
+        self.files_manage_bar = GridLayout()
+        self.files_manage_bar.cols = 2
+        self.files_manage_bar.row = 1
 
         self.right_lower_grid_layout.add_widget(self.files_manage_bar)
+
 
         
 
@@ -119,17 +152,48 @@ class MainFrame(GridLayout):
                     on_release = lambda a: self.create_settings_frame()
                 ))  
 
-        self.content = GridLayout()
+        self.content = GridLayout(size_hint_y=None)
+
         self.content.size_hint = (1,1)
         self.content.cols = 1
+
         self.right_lower_grid_layout.add_widget(self.content)
+
+
+        self.create_remote_paths_frame()
 
         
 
     def create_settings_frame(self):
 
         self.content.clear_widgets()
-        self.content.add_widget(Label(text='Settings', color=(0,0,0,1)))
+        self.content.add_widget(Label(text='Settings', color=(0,0,0,1)))     
+
+
+    def create_remote_paths_frame(self):
+
+        self.content.clear_widgets()
+        self.scroll_view  = ScrollView()
+
+        self.content_scroll_view = GridLayout(size_hint_y=None, row_default_height=60, cols=1)
+        self.content_scroll_view.bind(minimum_height=self.content_scroll_view.setter('height'))
+
+
+        paths = ["C:\\","D:\\","C:\\","D:\\","C:\\","D:\\","C:\\","D:\\","C:\\","D:\\","C:\\","D:\\","C:\\","D:\\"]
+
+
+
+        for path in paths:
+
+            self.content_scroll_view.add_widget(Label(text=path, color=(0,0,0,1)))
+
+        self.scroll_view.add_widget(self.content_scroll_view)
+
+        self.content.add_widget(self.scroll_view)
+
+        
+        # self.content.add_widget(Label(text='test', color=(0,0,0,1)))     
+
 
     def refresh_list(self):
 
