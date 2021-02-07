@@ -3,6 +3,7 @@ from kivy.uix.gridlayout import GridLayout
 from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.label import Label
 from kivy.uix.button import Button
+from kivy.uix.checkbox import CheckBox
 from kivy.uix.textinput import TextInput
 from kivy.config import Config
 from kivy.core.window import Window
@@ -49,6 +50,8 @@ class MainFrame(GridLayout):
         self.mode = "client"
 
         self.transfer_app = FileTransfer()
+
+        self.files_to_download = set()
 
         self.cols = 2
         self.rows = 2
@@ -130,7 +133,7 @@ class MainFrame(GridLayout):
 
         self.add_widget(self.right_lower_grid_layout)
 
-        self.files_manage_bar = GridLayout()
+        self.files_manage_bar = GridLayout(size_hint_y=None, height=100)
         self.files_manage_bar.cols = 2
         self.files_manage_bar.row = 1
 
@@ -143,13 +146,13 @@ class MainFrame(GridLayout):
                     color =(0, 0, 0, 1), 
                     background_normal = '', 
                     size_hint = (1, None), 
-                    on_release = lambda a: self.create_settings_frame()
+                    on_release = lambda a: self.upload_files()
                 ))  
         self.files_manage_bar.add_widget(Button(text = "Pobierz", 
                     color =(0, 0, 0, 1), 
                     background_normal = '', 
                     size_hint = (1, None), 
-                    on_release = lambda a: self.create_settings_frame()
+                    on_release = lambda a: self.download_files()
                 ))  
 
         self.content = GridLayout(size_hint_y=None)
@@ -179,13 +182,15 @@ class MainFrame(GridLayout):
         self.content_scroll_view.bind(minimum_height=self.content_scroll_view.setter('height'))
 
 
-        paths = ["C:\\","D:\\","C:\\","D:\\","C:\\","D:\\","C:\\","D:\\","C:\\","D:\\","C:\\","D:\\","C:\\","D:\\"]
-
-
+        paths = ["A:\\","B:\\","C:\\","D:\\","E:\\","F:\\","G:\\","H:\\","I:\\","J:\\","K:\\","L:\\","M:\\","N:\\"]
 
         for path in paths:
 
-            self.content_scroll_view.add_widget(Label(text=path, color=(0,0,0,1)))
+            self.content_scroll_view.add_widget(Button(text = path, 
+                    color =(0, 0, 0, 1), 
+                    size_hint = (1, None), 
+                    on_press = self.select_files
+                ))  
 
         self.scroll_view.add_widget(self.content_scroll_view)
 
@@ -194,6 +199,30 @@ class MainFrame(GridLayout):
         
         # self.content.add_widget(Label(text='test', color=(0,0,0,1)))     
 
+    def select_files(self,instance):
+
+        if instance.text in self.files_to_download:            
+            self.files_to_download.remove(instance.text)
+            instance.background_color = (1.0, 1.0, 1.0, 1.0)
+
+        else:
+
+            self.files_to_download.add(instance.text)
+            instance.background_color = (1.0, 0.0, 0.0, 1.0)
+
+
+        print(self.files_to_download)
+
+        
+
+
+    def download_files(self):
+
+        pass
+
+    def upload_files(self):
+
+        pass
 
     def refresh_list(self):
 
