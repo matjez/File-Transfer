@@ -11,6 +11,7 @@ from subprocess import Popen, PIPE
 from kivy.lang import Builder
 import kivy.properties as kyprops
 from kivy.uix.scrollview import ScrollView
+from kivy.uix.dropdown import DropDown 
 
 from app import FileTransfer
 
@@ -39,8 +40,22 @@ from app import FileTransfer
 #     height: 100
 # """)
 
+class Directory(Button):
+    def __init__(self, **kwargs):
+        Button.__init__(self, **kwargs)
+        self.register_event_type('on_double_press')
 
+        if kwargs.get("on_double_press") is not None:
+            self.bind(on_double_press=kwargs.get("on_double_press"))
 
+    def on_touch_down(self, touch):
+        if touch.is_double_tap and self.collide_point(touch.x, touch.y):
+            self.dispatch('on_double_press', touch)
+            return True
+        return Button.on_touch_down(self, touch)
+    def on_double_press(self, *args):
+
+        pass
 
 class MainFrame(GridLayout):
 
@@ -184,12 +199,32 @@ class MainFrame(GridLayout):
 
         paths = ["A:\\","B:\\","C:\\","D:\\","E:\\","F:\\","G:\\","H:\\","I:\\","J:\\","K:\\","L:\\","M:\\","N:\\"]
 
+        dropdown = DropDown() 
+
+        for drive in ["C:","D:"]: 
+        
+            btn = Button(text ='Dysk {}'.format(drive[0]), size_hint_y = None, height = 40) 
+
+            btn.bind(on_release = lambda btn: dropdown.select(btn.text)) 
+
+            dropdown.add_widget(btn) 
+        
+        mainbutton = Button(text ="Dysk C", size_hint =(1, None), pos =(350, 300)) 
+
+        mainbutton.bind(on_release = dropdown.open) 
+
+        dropdown.bind(on_select = lambda instance, x: setattr(mainbutton, 'text', x)) 
+
+        self.content.add_widget(mainbutton)
+
         for path in paths:
 
-            self.content_scroll_view.add_widget(Button(text = path, 
+            self.content_scroll_view.add_widget(Directory(text = path, 
                     color =(0, 0, 0, 1), 
                     size_hint = (1, None), 
-                    on_press = self.select_files
+                    on_press = self.select_files,
+                    on_double_press=self.change_path
+                    
                 ))  
 
         self.scroll_view.add_widget(self.content_scroll_view)
@@ -197,7 +232,10 @@ class MainFrame(GridLayout):
         self.content.add_widget(self.scroll_view)
 
         
-        # self.content.add_widget(Label(text='test', color=(0,0,0,1)))     
+        # self.content.add_widget(Label(text='test', color=(0,0,0,1)))  
+
+    def change_path(self,*args):
+        print(args[0], args[0].text)
 
     def select_files(self,instance):
 

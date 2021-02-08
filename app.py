@@ -402,7 +402,7 @@ class FileTransfer:
 
         def remove_host(self,address,hostname):
             pass
-
+"""
 while True:
 
     print("1. Serwer")
@@ -450,3 +450,4 @@ while True:
                 x = input()
                 send.get_files(file_paths)
                 
+"""
