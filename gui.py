@@ -7,13 +7,15 @@ from kivy.uix.checkbox import CheckBox
 from kivy.uix.textinput import TextInput
 from kivy.config import Config
 from kivy.core.window import Window
-from subprocess import Popen, PIPE
 from kivy.lang import Builder
 import kivy.properties as kyprops
 from kivy.uix.scrollview import ScrollView
 from kivy.uix.dropdown import DropDown 
 
-from app import FileTransfer
+from subprocess import Popen, PIPE
+from threading import Thread
+
+from app import *
 
 
 # Builder.load_string("""
@@ -57,14 +59,15 @@ class Directory(Button):
 
         pass
 
+
 class MainFrame(GridLayout):
 
     def __init__(self, **kwargs):
         super(MainFrame, self).__init__(**kwargs)
 
         self.mode = "client"
-
-        self.transfer_app = FileTransfer()
+        self.sender = None
+        self.receiver = None
 
         self.files_to_download = set()
 
@@ -139,7 +142,6 @@ class MainFrame(GridLayout):
 
         self.add_widget(self.left_lower_box_layout)
         self.left_lower_box_layout.cols = 3
-        self.refresh_list()
 
         self.right_lower_grid_layout = GridLayout()
         
@@ -155,7 +157,7 @@ class MainFrame(GridLayout):
         self.right_lower_grid_layout.add_widget(self.files_manage_bar)
 
 
-        
+        self.refresh_list()
 
         self.files_manage_bar.add_widget(Button(text = "Wyślij", 
                     color =(0, 0, 0, 1), 
@@ -178,32 +180,33 @@ class MainFrame(GridLayout):
         self.right_lower_grid_layout.add_widget(self.content)
 
 
-        self.create_remote_paths_frame()
-
         
-
     def create_settings_frame(self):
 
         self.content.clear_widgets()
         self.content.add_widget(Label(text='Settings', color=(0,0,0,1)))     
 
 
-    def create_remote_paths_frame(self):
+    def create_remote_paths_frame(self,current_path=""):
 
         self.content.clear_widgets()
-        self.scroll_view  = ScrollView()
+        self.scroll_view = ScrollView()
+
 
         self.content_scroll_view = GridLayout(size_hint_y=None, row_default_height=60, cols=1)
         self.content_scroll_view.bind(minimum_height=self.content_scroll_view.setter('height'))
 
+        import ast
+        paths = self.sender.get_directories(current_path).decode()
 
-        paths = ["A:\\","B:\\","C:\\","D:\\","E:\\","F:\\","G:\\","H:\\","I:\\","J:\\","K:\\","L:\\","M:\\","N:\\"]
+        paths = ast.literal_eval(paths)
+
 
         dropdown = DropDown() 
 
         for drive in ["C:","D:"]: 
         
-            btn = Button(text ='Dysk {}'.format(drive[0]), size_hint_y = None, height = 40) 
+            btn = Button(text ='Dysk {}'.format(drive[0]), size_hint_y = None, height = 40, on_press=self.change_path) 
 
             btn.bind(on_release = lambda btn: dropdown.select(btn.text)) 
 
@@ -216,6 +219,8 @@ class MainFrame(GridLayout):
         dropdown.bind(on_select = lambda instance, x: setattr(mainbutton, 'text', x)) 
 
         self.content.add_widget(mainbutton)
+
+        
 
         for path in paths:
 
@@ -235,7 +240,15 @@ class MainFrame(GridLayout):
         # self.content.add_widget(Label(text='test', color=(0,0,0,1)))  
 
     def change_path(self,*args):
-        print(args[0], args[0].text)
+
+        try:
+        
+            print(args, args[0], args[0].text)    
+            self.create_remote_paths_frame(args[0].text)
+        except:
+            self.create_remote_paths_frame("")
+
+
 
     def select_files(self,instance):
 
@@ -251,10 +264,50 @@ class MainFrame(GridLayout):
 
         print(self.files_to_download)
 
+    
+    def connection(self,instance):
+
+        def get_address(list_of_devices):
+            
+            for name in list_of_devices:
+                print(name)
+                if name == instance.text:
+                    res = list_of_devices[name]
+
+                    return res
+
         
 
+        if self.mode == "server":
+            self.sender = None
+            list_of_devices = get_devices_list()["server"]
 
-    def download_files(self):
+            server_info = get_address(list_of_devices)
+            print(server_info)
+
+            self.receiver = FileReceiver()
+            self.receiver.accept_connections(server_info[0],server_info[1])
+
+        else:
+
+            if self.sender == None or not self.sender.thread.is_alive(): 
+                
+                self.receiver = None
+                list_of_devices = get_devices_list()["client"]
+                self.sender = FileSender()
+
+                client_info = get_address(list_of_devices)
+                print(client_info)
+
+                self.sender.connect(client_info[0],client_info[1])
+                self.change_path("")
+
+
+    def connect_with_server(self,addr,port):
+        if self.mode == "client":
+            self.sender.connect(addr,port)
+
+    def download_files(self,paths):
 
         pass
 
@@ -264,37 +317,37 @@ class MainFrame(GridLayout):
 
     def refresh_list(self):
 
-        def add_list_of_widgets(list_of_names):
+        def add_list_of_widgets(devices):
 
-            if len(list_of_names) > 0: 
-                for name in list_of_names:
-                    self.left_lower_box_layout.add_widget(Button(text = name, 
+            if len(devices) > 0: 
+                for device in devices:
+                    self.left_lower_box_layout.add_widget(Button(text = device, 
                             color = (0, 0, 0, 1), 
                             background_normal = '', 
                             size_hint = (1, 1), 
                             pos_hint = {"x":0.35, "y":0.3},
-                            width = 50
+                            width = 50,
+                            on_press = self.connection
                         ))  
 
 
         self.left_lower_box_layout.clear_widgets()
-        list_of_devices = self.transfer_app.get_devices_list()
+        list_of_devices = get_devices_list()
 
-        if self.transfer_app.mode == 'client':
+        if self.mode == 'client':
             
-            add_list_of_widgets(list_of_devices["hosts"])
+            add_list_of_widgets(list_of_devices["client"])
 
         else:
 
-            add_list_of_widgets(list_of_devices["clients"])
-
+            add_list_of_widgets(list_of_devices["server"])
 
     def change_mode(self):
 
-        if self.transfer_app.mode == 'host':
-            self.transfer_app.mode = 'client'
+        if self.mode == 'server':
+            self.mode = 'client'
         else:
-            self.transfer_app.mode = 'host'
+            self.mode = 'server'
         
         self.refresh_list()
 
