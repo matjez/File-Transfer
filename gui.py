@@ -69,6 +69,10 @@ class MainFrame(GridLayout):
         self.sender = None
         self.receiver = None
 
+        self.drives = []
+        self.drive_letter = ""
+        self.current_path = ""
+
         self.files_to_download = set()
 
         self.cols = 2
@@ -109,7 +113,7 @@ class MainFrame(GridLayout):
                     size_hint = (1, 1), 
 
                     width = 50,
-                    on_release = lambda a: self.create_settings_frame()
+                    on_release = lambda a: self.show_directiories()
                 ))  
         self.right_up_grid_layout.add_widget(Button(text = "Add host", 
                     color =(0, 0, 0, 1), 
@@ -187,7 +191,7 @@ class MainFrame(GridLayout):
         self.content.add_widget(Label(text='Settings', color=(0,0,0,1)))     
 
 
-    def create_remote_paths_frame(self,current_path=""):
+    def create_remote_paths_frame(self,first_iteration=False):
 
         self.content.clear_widgets()
         self.scroll_view = ScrollView()
@@ -197,22 +201,39 @@ class MainFrame(GridLayout):
         self.content_scroll_view.bind(minimum_height=self.content_scroll_view.setter('height'))
 
         import ast
-        paths = self.sender.get_directories(current_path).decode()
+        paths = self.sender.get_directories(self.current_path).decode()
 
-        paths = ast.literal_eval(paths)
+        print(paths, "parthsy tutaj")
+        paths = ast.literal_eval(paths) 
 
 
         dropdown = DropDown() 
 
-        for drive in ["C:","D:"]: 
+        if first_iteration == True:
+
+            self.drives = paths
+            current_drive = paths[0]
+            self.current_path = current_drive
+
+            paths = self.sender.get_directories(self.current_path).decode()
+            paths = ast.literal_eval(paths) 
+            
         
-            btn = Button(text ='Dysk {}'.format(drive[0]), size_hint_y = None, height = 40, on_press=self.change_path) 
+        else:
+            current_drive = self.current_path.split("\\")[0]
+
+        for drive in self.drives: 
+
+            btn = Button(text = drive, size_hint_y = None, height = 40, on_press=self.change_drive) 
 
             btn.bind(on_release = lambda btn: dropdown.select(btn.text)) 
 
             dropdown.add_widget(btn) 
+
         
-        mainbutton = Button(text ="Dysk C", size_hint =(1, None), pos =(350, 300)) 
+        print(current_drive)
+        
+        mainbutton = Button(text = current_drive, size_hint =(1, None), pos =(350, 300)) 
 
         mainbutton.bind(on_release = dropdown.open) 
 
@@ -224,7 +245,9 @@ class MainFrame(GridLayout):
 
         for path in paths:
 
-            self.content_scroll_view.add_widget(Directory(text = path, 
+            path = path.split("\\")
+        
+            self.content_scroll_view.add_widget(Directory(text = path[-1], 
                     color =(0, 0, 0, 1), 
                     size_hint = (1, None), 
                     on_press = self.select_files,
@@ -239,26 +262,49 @@ class MainFrame(GridLayout):
         
         # self.content.add_widget(Label(text='test', color=(0,0,0,1)))  
 
-    def change_path(self,*args):
+    def change_drive(self, instance):
+        print(instance.text, "trttete")
+        self.current_path = ""
+        self.change_path(instance.text)
 
-        try:
-        
+    def change_path(self,*args,change_drive=False):
+
+        print(type(args[0]))
+        print(args[0])
+        if type(args[0]) == str:
+            
+
+            if args[0] == "":
+                self.current_path += args[0]
+                self.create_remote_paths_frame(first_iteration=True)
+            elif args[0] == "restore":
+                self.create_remote_paths_frame(first_iteration=False)
+            else:
+                self.current_path += args[0]
+                self.create_remote_paths_frame(first_iteration=False)
+        else:
             print(args, args[0], args[0].text)    
-            self.create_remote_paths_frame(args[0].text)
-        except:
-            self.create_remote_paths_frame("")
+            self.current_path += args[0].text + "\\"
+            
+            print(self.current_path, "tutaj")
+            self.create_remote_paths_frame(self.current_path)
 
+        self.files_to_download = set()
+
+        print(self.current_path, "current paths tutaj jest")
 
 
     def select_files(self,instance):
 
-        if instance.text in self.files_to_download:            
-            self.files_to_download.remove(instance.text)
+        path = self.current_path + instance.text
+
+        if path in self.files_to_download:            
+            self.files_to_download.remove(path)
             instance.background_color = (1.0, 1.0, 1.0, 1.0)
 
         else:
 
-            self.files_to_download.add(instance.text)
+            self.files_to_download.add(path)
             instance.background_color = (1.0, 0.0, 0.0, 1.0)
 
 
@@ -290,7 +336,7 @@ class MainFrame(GridLayout):
 
         else:
 
-            if self.sender == None or not self.sender.thread.is_alive(): 
+            if self.sender == None: 
                 
                 self.receiver = None
                 list_of_devices = get_devices_list()["client"]
@@ -307,13 +353,16 @@ class MainFrame(GridLayout):
         if self.mode == "client":
             self.sender.connect(addr,port)
 
-    def download_files(self,paths):
-
-        pass
+    def download_files(self):
+        
+        self.sender.get_files(self.files_to_download)
 
     def upload_files(self):
 
         pass
+
+    def show_directiories(self):
+        self.change_path("restore")
 
     def refresh_list(self):
 
