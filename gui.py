@@ -15,32 +15,25 @@ from kivy.uix.dropdown import DropDown
 from subprocess import Popen, PIPE
 from threading import Thread
 
+import sys
+from tkinter import filedialog, Tk
+
 from app import *
 
 
-# Builder.load_string("""
+class FileUploadDialog(Thread):
 
-# <RemotePaths>:
-#     spacing: 50
-#     size_hint_y: 1
-#     size_hint_x: 1
-#     height: 100
+    def __init__(self):
+        Thread.__init__(self)
 
-#     ScrollView:
-#         do_scroll_x: False
-#         do_scroll_y: True
-        
-#         GridLayout:
-#             orientation: "vertical"
-#             size_hint_y: None
-#             height: self.minimum_height
-#             padding: 50, 50, 50, 50
-# <Row>:
-#     spacing: 50
-#     size_hint_y: None
-#     size_hint_x: 1
-#     height: 100
-# """)
+
+    def return_file_paths(self):
+
+        self.root = Tk()
+        self.root.withdraw()
+
+        file_paths = filedialog.askopenfilenames()
+        return file_paths
 
 class Directory(Button):
     def __init__(self, **kwargs):
@@ -183,7 +176,6 @@ class MainFrame(GridLayout):
 
         self.right_lower_grid_layout.add_widget(self.content)
 
-
         
     def create_settings_frame(self):
 
@@ -309,7 +301,6 @@ class MainFrame(GridLayout):
 
 
         print(self.files_to_download)
-
     
     def connection(self,instance):
 
@@ -356,10 +347,14 @@ class MainFrame(GridLayout):
     def download_files(self):
         
         self.sender.get_files(self.files_to_download)
+        self.files_to_download = set()
 
     def upload_files(self):
 
-        pass
+        dial = FileUploadDialog()
+        f_paths = dial.return_file_paths()
+
+        self.sender.send_files(f_paths)
 
     def show_directiories(self):
         self.change_path("restore")
@@ -384,13 +379,13 @@ class MainFrame(GridLayout):
         list_of_devices = get_devices_list()
 
         if self.mode == 'client':
-            
+
             add_list_of_widgets(list_of_devices["client"])
 
         else:
 
             add_list_of_widgets(list_of_devices["server"])
-
+            
     def change_mode(self):
 
         if self.mode == 'server':

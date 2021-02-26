@@ -100,6 +100,10 @@ class FileReceiver:
         return str(self.directories)
 
     def accept_connections(self,address,hostname):
+        accept_connection_thread = Thread(target = self._accept_connections, args=(address,hostname,)) 
+        accept_connection_thread.start()
+
+    def _accept_connections(self,address,hostname):
 
         receive_socket = socket.socket()
         receive_socket.bind(("192.168.8.162",4888))
@@ -113,7 +117,6 @@ class FileReceiver:
             try:
             
                 string = string.decode()
-
 
                 #new_key = self.key_generator()
                 #self.connections[new_key] = [new_socket,datetime.datetime.now(), addr]
@@ -250,16 +253,27 @@ class FileSender:
         string = self.sc.recv(4096)
         print("Polaczonno", string)
 
-    
-
     def send_files(self,file_paths):
+        self.new_thread = Thread(target = self._send_files, args=(file_paths,)) 
+        self.new_thread.start()
+
+    def _send_files(self,file_paths):
 
 
-        self.s.send(str.encode("files"+str(file_paths)))
+        file_paths_info = ""
 
-        file_paths_splitted = file_paths.split(";")
+        for f in file_paths:
 
-        for f_path in file_paths_splitted:
+            f = f.split("/")
+            file_paths_info += f[-1] +  ";"
+
+        else:
+            
+            file_paths_info = file_paths_info[:-1]
+
+        self.s.send(str.encode("files"+str(file_paths_info)))
+
+        for f_path in file_paths:
 
 
             filesize = str(os.path.getsize(f_path))
@@ -282,8 +296,11 @@ class FileSender:
                 print(filesize)
                 self.sc.recv(4096)
 
-
     def get_files(self,file_paths):
+        self.new_thread = Thread(target = self._get_files, args=(file_paths,)) 
+        self.new_thread.start()
+
+    def _get_files(self,file_paths):
 
         file_paths_info = ""
         for f in file_paths:
