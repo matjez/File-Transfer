@@ -74,20 +74,15 @@ class FileReceiver:
     def get_directory(self,path):
 
         if path == "back" and len(self.list_of_paths) > 1:
-                print("jeden")
                 self.list_of_paths.pop()
             
         elif len(path) > 0:
-                print("dwa")
                 self.list_of_paths.append(path)       
                     
         else:
-            print("trzy")
             self.list_of_paths = []
             self.directories = get_drives_letters()
             return str(self.directories)
-
-        print(self.list_of_paths)
 
         files = glob.glob(self.list_of_paths[-1]+r"\\*")
         self.directories = []
@@ -101,7 +96,7 @@ class FileReceiver:
         return str(self.directories)
 
     def accept_connections(self,local_address,host_address,port=4888):
-        print("toto",local_address,host_address,port)
+
         accept_connection_thread = Thread(target = self._accept_connections, args=(local_address,host_address,port,)) 
         accept_connection_thread.start()
 
@@ -135,7 +130,7 @@ class FileReceiver:
 
 
             except Exception as e:
-                print("tutaj 1",e)
+                print(e)
                 continue
 
 
@@ -145,20 +140,17 @@ class FileReceiver:
 
     def receive_data(self,client_socket,send_back_socket):
 
-        print("1111")
         while True:
 
             try:
-                print("2222")
+
                 received = client_socket.recv(4096)
                 received = received.decode()
 
-                print("asddsa")
+
                 if received[:9] == "directory":
 
-                    print("tetet",received)
                     directory = self.get_directory(received[9:])
-                    print(directory)
                     send_back_socket.send(str.encode(directory))
 
 
@@ -166,34 +158,25 @@ class FileReceiver:
 
                     list_paths = received[5:].split(';')
 
-                    print("CHUJJJ  ", list_paths)
-                    print("CHUJJJ  ", received)
-
                     for p in list_paths:
-                        print("tukej1")
+
                         total = 0
 
                         file_size = client_socket.recv(4096)
                         file_size = file_size.decode()
-                        print("tukej2")
                         send_back_socket.send(str.encode("next"))
 
                         with open(p,"wb") as f:
-
                             while True:
-                                #print("tutu")
-                                print("Wielkosc pliku: ",file_size)
-                                print("Total: ",total)
-
                                 if int(file_size) <= total: 
-                                    print("break")
                                     break
+
                                 recvfile = client_socket.recv(4096)
                                 total = total + len(recvfile)
 
 
                                 f.write(recvfile)
-                            print("koniec")
+
                             send_back_socket.send(str.encode("END"))
 
                 elif received[:3] == "get":
@@ -210,17 +193,15 @@ class FileReceiver:
                             sendfile = f.read(4096)
                             while sendfile:
                                 send_back_socket.send(sendfile)
-                                print('Sent ')
                                 sendfile = f.read(4096)
-                            print("DONE")
-                            print(filesize)
+                            print("Transfer finished")
                             client_socket.recv(4096)
 
                 else:
                     send_back_socket.send(str.encode("test-test"))
 
             except Exception as e: 
-                print("tutaj 2",e)
+                print(e)
                 client_socket.close()
                 send_back_socket.close()
                 break
@@ -253,7 +234,7 @@ class FileSender:
         
         self.sc, addr = self.receive_socket.accept()
         string = self.sc.recv(4096)
-        print("Polaczonno", string)
+
 
     def terminate(self):
         self.new_thread.join()
@@ -294,11 +275,10 @@ class FileSender:
 
                 while sendfile:
                     self.s.send(sendfile)
-                    print('Sent ')
                     sendfile = f.read(4096)
 
-                print("DONE")
-                print(filesize)
+                print("Finished sending")
+
                 self.sc.recv(4096)
 
     def get_files(self,file_paths):
@@ -323,21 +303,18 @@ class FileSender:
             total = 0
             file_size = self.sc.recv(4096)
             file_size = file_size.decode()
-            print("tukej2")
             self.s.send(str.encode("next"))
             
             with open(f_path[-1],"wb") as f:
+
                 while True:
-                    #print("tutu")
-                    print("Wielkosc pliku: ",file_size)
-                    print("Total: ",total)
+
                     if int(file_size) <= total: 
-                        print("break")
                         break
                     recvfile = self.sc.recv(4096)
                     total = total + len(recvfile)
                     f.write(recvfile)
-                print("koniec")
+
                 self.s.send(str.encode("END"))
            
 
@@ -346,23 +323,15 @@ class FileSender:
         # zrobic zeby mozna bylo dluzsze robic xD
 
         try:
-            print("test")
-            to_send = "directory"+chosen_directory
-            print(to_send)
-            print(to_send)
-            print(to_send)
-            self.s.send(str.encode(to_send))
 
+            to_send = "directory"+chosen_directory
+            self.s.send(str.encode(to_send))
 
             while True:
                 string = self.sc.recv(4096)
-                print(string.decode())
                 break
 
         except Exception as e:
-            # self.s.close()
-            # self.receive_socket.close()
-            print(e)
             return e
         
         return string   

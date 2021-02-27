@@ -200,8 +200,6 @@ class MainFrame(GridLayout):
         self.content_scroll_view.bind(minimum_height=self.content_scroll_view.setter('height'))
 
         paths = self.sender.get_directories(self.current_path).decode()
-
-        print(paths, "parthsy tutaj")
         paths = ast.literal_eval(paths) 
 
 
@@ -227,9 +225,6 @@ class MainFrame(GridLayout):
             btn.bind(on_release = lambda btn: dropdown.select(btn.text)) 
 
             dropdown.add_widget(btn) 
-
-        
-        print(current_drive)
         
         mainbutton = Button(text = current_drive, size_hint =(1, None), pos =(350, 300)) 
 
@@ -261,14 +256,12 @@ class MainFrame(GridLayout):
         # self.content.add_widget(Label(text='test', color=(0,0,0,1)))  
 
     def change_drive(self, instance):
-        print(instance.text, "trttete")
+
         self.current_path = ""
         self.change_path(instance.text)
 
     def change_path(self,*args,change_drive=False):
 
-        print(type(args[0]))
-        print(args[0])
         if type(args[0]) == str:
             
 
@@ -280,17 +273,12 @@ class MainFrame(GridLayout):
             else:
                 self.current_path += args[0]
                 self.create_remote_paths_frame(first_iteration=False)
-        else:
-            print(args, args[0], args[0].text)    
+        else:   
             self.current_path += args[0].text + "\\"
             
-            print(self.current_path, "tutaj")
             self.create_remote_paths_frame(self.current_path)
 
         self.files_to_download = set()
-
-        print(self.current_path, "current paths tutaj jest")
-
 
     def select_files(self,instance):
 
@@ -304,16 +292,13 @@ class MainFrame(GridLayout):
 
             self.files_to_download.add(path)
             instance.background_color = (1.0, 0.0, 0.0, 1.0)
-
-
-        print(self.files_to_download)
     
     def connection(self,instance):
 
         def get_address(list_of_devices):
             
             for name in list_of_devices:
-                print(name)
+
                 if name == instance.text:
                     res = list_of_devices[name]
 
@@ -326,7 +311,6 @@ class MainFrame(GridLayout):
             list_of_devices = get_devices_list()["server"]
 
             server_info = get_address(list_of_devices)
-            print(server_info)
 
             self.receiver = FileReceiver()
             self.receiver.accept_connections(self.ip_address,server_info[0],server_info[1])
@@ -340,7 +324,6 @@ class MainFrame(GridLayout):
                 self.sender = FileSender()
 
                 client_info = get_address(list_of_devices)
-                print(client_info)
 
                 self.sender.connect(self.ip_address,client_info[0],client_info[1])
                 self.change_path("")
