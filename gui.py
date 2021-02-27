@@ -8,24 +8,29 @@ from kivy.uix.textinput import TextInput
 from kivy.config import Config
 from kivy.core.window import Window
 from kivy.lang import Builder
-import kivy.properties as kyprops
 from kivy.uix.scrollview import ScrollView
 from kivy.uix.dropdown import DropDown 
 
 from subprocess import Popen, PIPE
 from threading import Thread
+from tkinter import filedialog, Tk
 
 import sys
-from tkinter import filedialog, Tk
+import ast
 
 from app import *
 
+def get_local_ip():
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    s.connect(("8.8.8.8", 80))
+    res = s.getsockname()[0]
+    s.close()
+    return res
 
 class FileUploadDialog(Thread):
 
     def __init__(self):
         Thread.__init__(self)
-
 
     def return_file_paths(self):
 
@@ -66,6 +71,8 @@ class MainFrame(GridLayout):
         self.drive_letter = ""
         self.current_path = ""
 
+        self.ip_address = get_local_ip()
+
         self.files_to_download = set()
 
         self.cols = 2
@@ -85,6 +92,7 @@ class MainFrame(GridLayout):
         self.left_up_grid_layout.add_widget(Button(text = "Refresh", 
                     color =(0, 0, 0, 1), 
                     background_normal = '', 
+                    background_color = (0.65,0,0,1), 
                     pos_hint = (0, 0),
                     on_release = lambda a: self.refresh_list()
                 ))  
@@ -103,24 +111,24 @@ class MainFrame(GridLayout):
         self.right_up_grid_layout.add_widget(Button(text = "Directory", 
                     color =(0, 0, 0, 1), 
                     background_normal = '', 
+                    background_color = (0,0.65,0,1),                 
                     size_hint = (1, 1), 
-
                     width = 50,
                     on_release = lambda a: self.show_directiories()
                 ))  
         self.right_up_grid_layout.add_widget(Button(text = "Add host", 
                     color =(0, 0, 0, 1), 
                     background_normal = '', 
+                    background_color = (0,0.65,0,1), 
                     size_hint = (1, 1), 
-
                     width = 50,
                     on_release = lambda a: self.create_settings_frame()
                 ))      
         self.right_up_grid_layout.add_widget(Button(text = "Create host", 
                     color =(0, 0, 0, 1), 
                     background_normal = '', 
+                    background_color = (0,0.65,0,1), 
                     size_hint = (1, 1), 
-
                     width = 50,
                     on_release = lambda a: self.create_settings_frame()
                 ))  
@@ -153,21 +161,7 @@ class MainFrame(GridLayout):
 
         self.right_lower_grid_layout.add_widget(self.files_manage_bar)
 
-
         self.refresh_list()
-
-        self.files_manage_bar.add_widget(Button(text = "Wyślij", 
-                    color =(0, 0, 0, 1), 
-                    background_normal = '', 
-                    size_hint = (1, None), 
-                    on_release = lambda a: self.upload_files()
-                ))  
-        self.files_manage_bar.add_widget(Button(text = "Pobierz", 
-                    color =(0, 0, 0, 1), 
-                    background_normal = '', 
-                    size_hint = (1, None), 
-                    on_release = lambda a: self.download_files()
-                ))  
 
         self.content = GridLayout(size_hint_y=None)
 
@@ -185,6 +179,19 @@ class MainFrame(GridLayout):
 
     def create_remote_paths_frame(self,first_iteration=False):
 
+        self.files_manage_bar.add_widget(Button(text = "Wyślij", 
+                    color =(0, 0, 0, 1), 
+                    background_normal = '', 
+                    size_hint = (1, None), 
+                    on_release = lambda a: self.upload_files()
+                ))  
+        self.files_manage_bar.add_widget(Button(text = "Pobierz", 
+                    color =(0, 0, 0, 1), 
+                    background_normal = '', 
+                    size_hint = (1, None), 
+                    on_release = lambda a: self.download_files()
+                ))  
+
         self.content.clear_widgets()
         self.scroll_view = ScrollView()
 
@@ -192,7 +199,6 @@ class MainFrame(GridLayout):
         self.content_scroll_view = GridLayout(size_hint_y=None, row_default_height=60, cols=1)
         self.content_scroll_view.bind(minimum_height=self.content_scroll_view.setter('height'))
 
-        import ast
         paths = self.sender.get_directories(self.current_path).decode()
 
         print(paths, "parthsy tutaj")
@@ -323,7 +329,7 @@ class MainFrame(GridLayout):
             print(server_info)
 
             self.receiver = FileReceiver()
-            self.receiver.accept_connections(server_info[0],server_info[1])
+            self.receiver.accept_connections(self.ip_address,server_info[0],server_info[1])
 
         else:
 
@@ -336,7 +342,7 @@ class MainFrame(GridLayout):
                 client_info = get_address(list_of_devices)
                 print(client_info)
 
-                self.sender.connect(client_info[0],client_info[1])
+                self.sender.connect(self.ip_address,client_info[0],client_info[1])
                 self.change_path("")
 
 
@@ -385,13 +391,29 @@ class MainFrame(GridLayout):
         else:
 
             add_list_of_widgets(list_of_devices["server"])
-            
+
+    def clear_history(self):
+
+        self.sender = None
+        self.receiver = None
+        self.drives = []
+        self.drive_letter = ""
+        self.current_path = ""
+        self.files_to_download = set()
+
+
     def change_mode(self):
 
         if self.mode == 'server':
             self.mode = 'client'
+            self.clear_history()
+            self.create_settings_frame()
+
+
         else:
             self.mode = 'server'
+            self.clear_history()
+            self.create_settings_frame()
         
         self.refresh_list()
 

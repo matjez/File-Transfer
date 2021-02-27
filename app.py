@@ -29,6 +29,7 @@ def get_devices_list():
         host_file = json.loads(host_file.read())
         return host_file
 
+
 class FileReceiver:
 
     def __init__(self):
@@ -99,20 +100,21 @@ class FileReceiver:
 
         return str(self.directories)
 
-    def accept_connections(self,address,hostname):
-        accept_connection_thread = Thread(target = self._accept_connections, args=(address,hostname,)) 
+    def accept_connections(self,local_address,host_address,port=4888):
+        print("toto",local_address,host_address,port)
+        accept_connection_thread = Thread(target = self._accept_connections, args=(local_address,host_address,port,)) 
         accept_connection_thread.start()
 
-    def _accept_connections(self,address,hostname):
+    def _accept_connections(self,local_address,host_address,port):
 
         receive_socket = socket.socket()
-        receive_socket.bind(("192.168.8.162",4888))
+        receive_socket.bind((local_address,port))
         receive_socket.listen()
 
         while True:
 
             client_socket, addr = receive_socket.accept()
-            string = client_socket.recv(4096)
+            string = client_socket.recv(port)
 
             try:
             
@@ -123,7 +125,7 @@ class FileReceiver:
 
                 send_back_socket = socket.socket()
 
-                send_back_socket.connect(("192.168.8.123",4888)) # zmienic pozniej na addr
+                send_back_socket.connect((host_address,port)) # zmienic pozniej na addr
                 send_back_socket.send(str.encode("Pierwsza wiadomosc"))
 
                 
@@ -236,15 +238,15 @@ class FileSender:
         self.current_directiory = ""
 
         
-    def connect(self,addr,port=4888):
+    def connect(self,local_address,host_address,port=4888):
 
-        print("Connecting to", addr, port)
+        print("Connecting to", host_address, port)
         self.s = socket.socket()
-        self.s.connect(("192.168.8.162",4888))
+        self.s.connect((host_address,port))
 
 
         self.receive_socket = socket.socket()
-        self.receive_socket.bind(("192.168.8.123",4888))
+        self.receive_socket.bind((local_address,port))
         self.receive_socket.listen()
 
         self.s.send(str.encode("Establish connection"))
@@ -252,6 +254,9 @@ class FileSender:
         self.sc, addr = self.receive_socket.accept()
         string = self.sc.recv(4096)
         print("Polaczonno", string)
+
+    def terminate(self):
+        self.new_thread.join()
 
     def send_files(self,file_paths):
         self.new_thread = Thread(target = self._send_files, args=(file_paths,)) 
@@ -268,7 +273,7 @@ class FileSender:
             file_paths_info += f[-1] +  ";"
 
         else:
-            
+
             file_paths_info = file_paths_info[:-1]
 
         self.s.send(str.encode("files"+str(file_paths_info)))
@@ -367,52 +372,3 @@ class FileSender:
 
     def remove_host(self,address,hostname):
         pass
-"""
-while True:
-
-    print("1. Serwer")
-    print("2. Połącz z serwerem")
-
-
-    receive = FileTransfer.FileReceiver()
-
-    address = "192.168.8.1"
-    hostname = "Komputer 1"
-
-    file_paths = "xtest1.txt;xtest2.txt;xtest3.txt"
-
-    x = input(": ")
-
-    if(x == "1"):
-        receive.accept_connections(address,hostname)
-
-    elif(x == "2"):
-
-        send = FileTransfer.FileSender()
-        send.connect("192.168.8.162")
-        send.get_directories("")
-        
-        while True:
-
-            print(" ")
-            print("1. Ścieżka plików")
-            print("2. Wyślij pliki")
-            print("3. Pobierz pliki")
-
-            x = input("Wybierz: ")
-
-            if(x == "1"):
-                print("")
-                path = input("path: ")
-                print(x)
-                send.get_directories(path)
-
-            elif(x == "2"):
-                x = input()
-                send.send_files(file_paths)
-
-            elif(x == "3"):
-                x = input()
-                send.get_files(file_paths)
-                
-"""
