@@ -155,9 +155,8 @@ class MainFrame(GridLayout):
 
         self.add_widget(self.right_lower_grid_layout)
 
-        self.files_manage_bar = GridLayout(size_hint_y=None, height=100)
-        self.files_manage_bar.cols = 2
-        self.files_manage_bar.row = 1
+        self.files_manage_bar = GridLayout(size_hint_y=None, height=100, cols=2,rows=1)
+
 
         self.right_lower_grid_layout.add_widget(self.files_manage_bar)
 
@@ -178,6 +177,9 @@ class MainFrame(GridLayout):
 
 
     def create_remote_paths_frame(self,first_iteration=False):
+        
+        
+        self.files_manage_bar.clear_widgets()
 
         self.files_manage_bar.add_widget(Button(text = "Wyślij", 
                     color =(0, 0, 0, 1), 
@@ -371,9 +373,15 @@ class MainFrame(GridLayout):
 
             add_list_of_widgets(list_of_devices["client"])
 
+            try:
+                self.create_remote_paths_frame()
+            except:
+                pass
+
         else:
 
             add_list_of_widgets(list_of_devices["server"])
+
 
     def clear_history(self):
 
@@ -389,15 +397,24 @@ class MainFrame(GridLayout):
 
         if self.mode == 'server':
             self.mode = 'client'
+
+            try:
+                self.receiver.receive_socket.close()
+
+            except Exception as e:
+                pass
+
+
             self.clear_history()
             self.create_settings_frame()
 
 
         else:
             self.mode = 'server'
+
             self.clear_history()
             self.create_settings_frame()
-        
+
         self.refresh_list()
 
 class GuiApp(App):
