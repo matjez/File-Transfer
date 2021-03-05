@@ -1,33 +1,16 @@
 import json
 import socket
 import sys
-import os
 import random
 import string
 import datetime
 import time
 import glob
-
-from threading import Thread
-
 import stat
-import win32api, win32con
+import os
 from pathlib import Path
-
-
-def get_drives_letters():
-
-    if os.name == "nt":
-
-        drives = win32api.GetLogicalDriveStrings()
-        drives = drives.split('\000')[:-1]
-
-        return drives
-
-def get_devices_list():
-    with open("hosts.json") as host_file:
-        host_file = json.loads(host_file.read())
-        return host_file
+from threading import Thread
+from system_info import get_local_ip, get_drives_letters
 
 
 class FileReceiver:
@@ -35,8 +18,7 @@ class FileReceiver:
     def __init__(self):
 
         self.connections = {}
-        self.current_directiory = ""
-        self.directories = []
+        self.drives = []
         self.list_of_paths = []
 
     def key_generator(self):
@@ -81,52 +63,52 @@ class FileReceiver:
                     
         else:
             self.list_of_paths = []
-            self.directories = get_drives_letters()
-            return str(self.directories)
+            self.drives = get_drives_letters()
+            return str(self.drives)
 
         files = glob.glob(self.list_of_paths[-1]+r"\\*")
-        self.directories = []
+        self.drives = []
 
         for f in files:
             if bool(os.stat(f).st_file_attributes & stat.FILE_ATTRIBUTE_HIDDEN) == False:
-                self.directories.append(f)
+                self.drives.append(f)
 
-        self.directories = [os.path.normpath(i) for i in self.directories]
+        self.drives = [os.path.normpath(i) for i in self.drives]
 
-        return str(self.directories)
+        return str(self.drives)
 
-    def accept_connections(self,local_address,host_address,port=4888):
+    def accept_connections(self,local_address,port=4888):
 
-        accept_connection_thread = Thread(target = self._accept_connections, args=(local_address,host_address,port,)) 
+        accept_connection_thread = Thread(target = self._accept_connections, args=(local_address,port,)) 
         accept_connection_thread.start()
 
-    def _accept_connections(self,local_address,host_address,port):
+    def _accept_connections(self,local_address,port):  
 
-        receive_socket = socket.socket()
-        receive_socket.bind((local_address,port))
-        receive_socket.listen()
+        self.receive_socket = socket.socket()
+        self.receive_socket.bind((local_address,port))
+        self.receive_socket.listen()
 
         while True:
 
-            client_socket, addr = receive_socket.accept()
-            string = client_socket.recv(port)
+            try:
+
+                client_socket, addr = self.receive_socket.accept()
+                string = client_socket.recv(port)
+
+            except:
+                break
 
             try:
             
                 string = string.decode()
-
-                #new_key = self.key_generator()
-                #self.connections[new_key] = [new_socket,datetime.datetime.now(), addr]
-
                 send_back_socket = socket.socket()
 
-                send_back_socket.connect((host_address,port)) # zmienic pozniej na addr
-                send_back_socket.send(str.encode("Pierwsza wiadomosc"))
+                send_back_socket.connect((addr[0],port)) # zmienic pozniej na addr
+                send_back_socket.send(str.encode("First mess"))
 
                 
-                new_thread = Thread(target = self.receive_data, args=(client_socket,send_back_socket,)) 
-                new_thread.start()
-                
+                self.new_thread = Thread(target = self.receive_data, args=(client_socket,send_back_socket,)) 
+                self.new_thread.start()
 
 
             except Exception as e:
@@ -135,7 +117,7 @@ class FileReceiver:
 
 
 
-        receive_socket.close()
+        self.receive_socket.close()
 
 
     def receive_data(self,client_socket,send_back_socket):
@@ -183,19 +165,25 @@ class FileReceiver:
                     file_paths = received[3:].split(';')
 
                     for f_path in file_paths:
-                        filesize = str(os.path.getsize(f_path))
-                        
-                        send_back_socket.send(str.encode(filesize))
-                        client_socket.recv(4096)
-                        
-                        # zrobic tak zeby najouerw wyslac wielkosc pliku
-                        with open(f_path,"rb") as f:  # Zmienic pozniej na f path
-                            sendfile = f.read(4096)
-                            while sendfile:
-                                send_back_socket.send(sendfile)
-                                sendfile = f.read(4096)
-                            print("Transfer finished")
+
+                        if not os.path.isfile(f_path): 
+                            send_back_socket.send(str.encode("NOT FOUND"))
+
+                        else:
+
+                            filesize = str(os.path.getsize(f_path))
+                            
+                            send_back_socket.send(str.encode(filesize))
                             client_socket.recv(4096)
+                            
+                        
+                            with open(f_path,"rb") as f: 
+                                sendfile = f.read(4096)
+                                while sendfile:
+                                    send_back_socket.send(sendfile)
+                                    sendfile = f.read(4096)
+                                print("Transfer finished")
+                                client_socket.recv(4096)
 
                 else:
                     send_back_socket.send(str.encode("test-test"))
@@ -218,33 +206,32 @@ class FileSender:
     def __init__(self):
         self.current_directiory = ""
 
-        
     def connect(self,local_address,host_address,port=4888):
 
         print("Connecting to", host_address, port)
-        self.s = socket.socket()
-        self.s.connect((host_address,port))
 
+        try:
+            self.s = socket.socket()
+            self.s.connect((host_address,port))
 
-        self.receive_socket = socket.socket()
-        self.receive_socket.bind((local_address,port))
-        self.receive_socket.listen()
+            self.receive_socket = socket.socket()
+            self.receive_socket.bind((local_address,port))
+            self.receive_socket.listen()
+
+        except:
+            exit()
 
         self.s.send(str.encode("Establish connection"))
         
-        self.sc, addr = self.receive_socket.accept()
-        string = self.sc.recv(4096)
+        self.sc, _ = self.receive_socket.accept()
+        self.sc.recv(4096)
 
-
-    def terminate(self):
-        self.new_thread.join()
 
     def send_files(self,file_paths):
         self.new_thread = Thread(target = self._send_files, args=(file_paths,)) 
         self.new_thread.start()
 
     def _send_files(self,file_paths):
-
 
         file_paths_info = ""
 
@@ -266,10 +253,8 @@ class FileSender:
             
             self.s.send(str.encode(filesize))
             self.sc.recv(4096)
-            
-            # zrobic tak zeby najouerw wyslac wielkosc pliku
 
-            with open(f_path,"rb") as f:  # Zmienic pozniej na f path
+            with open(f_path,"rb") as f:
 
                 sendfile = f.read(4096)
 
@@ -301,26 +286,31 @@ class FileSender:
 
             f_path = f_path.split("\\")
             total = 0
-            file_size = self.sc.recv(4096)
-            file_size = file_size.decode()
-            self.s.send(str.encode("next"))
-            
-            with open(f_path[-1],"wb") as f:
+            received = self.sc.recv(4096)
 
-                while True:
+            received = received.decode()
 
-                    if int(file_size) <= total: 
-                        break
-                    recvfile = self.sc.recv(4096)
-                    total = total + len(recvfile)
-                    f.write(recvfile)
+            print("received", received)
+            if received != "NOT FOUND":
 
-                self.s.send(str.encode("END"))
+                file_size = received
+
+                self.s.send(str.encode("next"))
+                
+                with open(f_path[-1],"wb") as f:
+
+                    while True:
+
+                        if int(file_size) <= total: 
+                            break
+                        recvfile = self.sc.recv(4096)
+                        total = total + len(recvfile)
+                        f.write(recvfile)
+
+                    self.s.send(str.encode("END"))
            
 
     def get_directories(self,chosen_directory):
-
-        # zrobic zeby mozna bylo dluzsze robic xD
 
         try:
 
@@ -335,9 +325,3 @@ class FileSender:
             return e
         
         return string   
-
-    def add_host(self,address,hostname):
-        pass
-
-    def remove_host(self,address,hostname):
-        pass

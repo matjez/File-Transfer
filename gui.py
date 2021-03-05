@@ -18,14 +18,8 @@ from tkinter import filedialog, Tk
 import sys
 import ast
 
-from app import *
-
-def get_local_ip():
-    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    s.connect(("8.8.8.8", 80))
-    res = s.getsockname()[0]
-    s.close()
-    return res
+from app import FileReceiver, FileSender
+from system_info import get_devices_list, get_local_ip, write_new_host
 
 class FileUploadDialog(Thread):
 
@@ -45,6 +39,7 @@ class Directory(Button):
         Button.__init__(self, **kwargs)
         self.register_event_type('on_double_press')
 
+
         if kwargs.get("on_double_press") is not None:
             self.bind(on_double_press=kwargs.get("on_double_press"))
 
@@ -56,6 +51,138 @@ class Directory(Button):
     def on_double_press(self, *args):
 
         pass
+
+class ContentFrame(BoxLayout):
+
+    def __init__(self, content_type, **kwargs):
+        BoxLayout.__init__(self, **kwargs)
+
+        self.orientation = 'vertical'
+        self.spacing = 25
+        self.padding = (50, 50, 150, 100)
+        self.input_fields = []
+        self.last_string = ""
+
+        if content_type == "Add host":
+            self.host_addition()
+
+        elif content_type == "Settings":
+            self.settings()
+
+        else:
+            pass
+
+    def host_addition(self):
+
+        def add_grid(widget_1, widget_2):
+
+            grid = GridLayout()
+            grid.cols = 2
+            grid.add_widget(widget_1)
+            grid.add_widget(widget_2)
+            self.add_widget(grid)
+
+        def validate(instance, value):
+
+            if len(value) > 0:
+                char = value[-1]
+
+                if instance.id == "name_text":
+
+                    if char.isalpha() or char.isdigit() or char in ("_"," "):
+
+                        if len(value) > 20:
+                            instance.text = instance.text[:-1]
+                    else:
+                        instance.text = instance.text[:-1]
+
+                elif instance.id == "ip_address_text":
+
+                    if char.isdigit() or char == ".":
+                    
+                        if len(value) > 15:
+                            instance.text = instance.text[:-1]
+
+                        elif char == "." and instance.text[-2] == ".":
+                            instance.text = instance.text[:-1]
+
+                        else:
+
+                            dig_counter = 0
+                            dot_counter = 0
+
+                            for c in instance.text[::-1]: # loop reversed value
+
+                                if c.isdigit():
+                                    dig_counter += 1
+
+                                elif c == ".":
+                                    dig_counter = 0
+                                    dot_counter +=1
+
+                                if dig_counter > 3 or dot_counter > 3:
+                                    instance.text = instance.text[:-1]
+                                    break
+                
+                    else:
+                        instance.text = instance.text[:-1]
+
+                elif instance.id == "port_text":
+                    if char.isdigit():
+                        
+                        if len(value) > 5:
+                            instance.text = instance.text[:-1]
+
+                    else:
+                        instance.text = instance.text[:-1]
+
+                        
+
+        grid = GridLayout()
+        grid.cols = 2
+
+        name_text = TextInput(id="name_text",focus_previous=True)
+        name_text.halign = "center"
+        name_text.valign = "middler"
+        name_text.size_hint_y = 0.5
+        name_text.font_size = name_text.height * 0.3
+        name_text.bind(text=validate)
+        self.input_fields.append(name_text)
+
+        add_grid(Label(text="Name", color=(0,0,0,1), font_size='25sp'),name_text)
+
+        ip_address_text = TextInput(id="ip_address_text")
+        ip_address_text.halign = "center"
+        ip_address_text.valign = "middler"
+        ip_address_text.size_hint_y = 0.5
+        ip_address_text.font_size = name_text.height * 0.3
+        ip_address_text.bind(text=validate)
+        self.input_fields.append(ip_address_text)
+
+        add_grid(Label(text="Ip address", color=(0,0,0,1), font_size='25sp'),ip_address_text)
+
+        port_text = TextInput(id="port_text")
+        port_text.halign = "center"
+        port_text.valign = "middler"
+        port_text.size_hint_y = 0.5
+        port_text.font_size = name_text.height * 0.3
+        port_text.bind(text=validate)
+        self.input_fields.append(port_text)
+
+        add_grid(Label(text="Port", color=(0,0,0,1), font_size='25sp'),port_text)
+
+        add_grid(Label(text=""),Button(text="Add", color=(0,0,0,1), font_size='25sp', on_release= lambda a: self.on_button_click()))
+
+    def on_button_click(self):
+
+        write_new_host(self.input_fields[0].text,
+                        self.input_fields[1].text,
+                        int(self.input_fields[2].text))
+
+    def settings(self):
+
+        self.add_widget(Label(text="settings", color=(0,0,0,1)))
+        self.add_widget(Label(text="settings", color=(0,0,0,1)))
 
 
 class MainFrame(GridLayout):
@@ -122,24 +249,24 @@ class MainFrame(GridLayout):
                     background_color = (0,0.65,0,1), 
                     size_hint = (1, 1), 
                     width = 50,
-                    on_release = lambda a: self.create_settings_frame()
+                    on_release = self.create_content_frame
                 ))      
-        self.right_up_grid_layout.add_widget(Button(text = "Create host", 
+        self.right_up_grid_layout.add_widget(Button(text = "", 
                     color =(0, 0, 0, 1), 
                     background_normal = '', 
                     background_color = (0,0.65,0,1), 
                     size_hint = (1, 1), 
                     width = 50,
-                    on_release = lambda a: self.create_settings_frame()
+                    # on_release = self.create_content_frame
                 ))  
-        self.right_up_grid_layout.add_widget(Button(text ="", 
+        self.right_up_grid_layout.add_widget(Button(text = "Settings", 
                     color =(0, 0, 0, 1), 
                     background_normal = 'data/img/options_2.png', 
                     background_down ='data/img/options_2.png', 
                     size_hint = (1, 1), 
 
                     width = 50,
-                    on_release = lambda a: self.create_settings_frame()
+                    on_release = self.create_content_frame
                 ))  
 
         self.left_lower_box_layout = BoxLayout(orientation='vertical')
@@ -149,7 +276,6 @@ class MainFrame(GridLayout):
         self.left_lower_box_layout.cols = 3
 
         self.right_lower_grid_layout = GridLayout()
-        
         self.right_lower_grid_layout.cols = 1
         self.right_lower_grid_layout.size_hint = (1, 1) # co to robi
 
@@ -169,16 +295,14 @@ class MainFrame(GridLayout):
 
         self.right_lower_grid_layout.add_widget(self.content)
 
-        
-    def create_settings_frame(self):
+
+    def create_content_frame(self,instance):
 
         self.content.clear_widgets()
-        self.content.add_widget(Label(text='Settings', color=(0,0,0,1)))     
-
+        self.content.add_widget(ContentFrame(instance.text))     
 
     def create_remote_paths_frame(self,first_iteration=False):
-        
-        
+
         self.files_manage_bar.clear_widgets()
 
         self.files_manage_bar.add_widget(Button(text = "Wyślij", 
@@ -187,6 +311,7 @@ class MainFrame(GridLayout):
                     size_hint = (1, None), 
                     on_release = lambda a: self.upload_files()
                 ))  
+                
         self.files_manage_bar.add_widget(Button(text = "Pobierz", 
                     color =(0, 0, 0, 1), 
                     background_normal = '', 
@@ -196,6 +321,7 @@ class MainFrame(GridLayout):
 
         self.content.clear_widgets()
         self.scroll_view = ScrollView()
+
 
 
         self.content_scroll_view = GridLayout(size_hint_y=None, row_default_height=60, cols=1)
@@ -223,9 +349,7 @@ class MainFrame(GridLayout):
         for drive in self.drives: 
 
             btn = Button(text = drive, size_hint_y = None, height = 40, on_press=self.change_drive) 
-
             btn.bind(on_release = lambda btn: dropdown.select(btn.text)) 
-
             dropdown.add_widget(btn) 
         
         mainbutton = Button(text = current_drive, size_hint =(1, None), pos =(350, 300)) 
@@ -251,11 +375,7 @@ class MainFrame(GridLayout):
                 ))  
 
         self.scroll_view.add_widget(self.content_scroll_view)
-
         self.content.add_widget(self.scroll_view)
-
-        
-        # self.content.add_widget(Label(text='test', color=(0,0,0,1)))  
 
     def change_drive(self, instance):
 
@@ -294,8 +414,13 @@ class MainFrame(GridLayout):
 
             self.files_to_download.add(path)
             instance.background_color = (1.0, 0.0, 0.0, 1.0)
-    
+
+
     def connection(self,instance):
+        self.connection_thread = Thread(target = self._connection, args=(instance,)) 
+        self.connection_thread.start()
+    
+    def _connection(self,instance):
 
         def get_address(list_of_devices):
             
@@ -306,23 +431,21 @@ class MainFrame(GridLayout):
 
                     return res
 
-        
-
         if self.mode == "server":
             self.sender = None
-            list_of_devices = get_devices_list()["server"]
+            list_of_devices = get_devices_list()["clients"]
 
             server_info = get_address(list_of_devices)
 
             self.receiver = FileReceiver()
-            self.receiver.accept_connections(self.ip_address,server_info[0],server_info[1])
+            self.receiver.accept_connections(self.ip_address,server_info[1])
 
         else:
 
             if self.sender == None: 
                 
                 self.receiver = None
-                list_of_devices = get_devices_list()["client"]
+                list_of_devices = get_devices_list()["clients"]
                 self.sender = FileSender()
 
                 client_info = get_address(list_of_devices)
@@ -337,18 +460,23 @@ class MainFrame(GridLayout):
 
     def download_files(self):
         
-        self.sender.get_files(self.files_to_download)
-        self.files_to_download = set()
+        if len(self.files_to_download) != 0:
+            self.sender.get_files(self.files_to_download)
+            self.files_to_download = set()
+
+            self.change_path("restore") 
 
     def upload_files(self):
 
         dial = FileUploadDialog()
         f_paths = dial.return_file_paths()
 
-        self.sender.send_files(f_paths)
+        if f_paths != "":
+            self.sender.send_files(f_paths)
 
     def show_directiories(self):
-        self.change_path("restore")
+        if self.sender != None:
+            self.change_path("restore")
 
     def refresh_list(self):
 
@@ -371,16 +499,14 @@ class MainFrame(GridLayout):
 
         if self.mode == 'client':
 
-            add_list_of_widgets(list_of_devices["client"])
-
-            try:
-                self.create_remote_paths_frame()
-            except:
-                pass
+            add_list_of_widgets(list_of_devices["clients"])
+            print("client")
 
         else:
 
-            add_list_of_widgets(list_of_devices["server"])
+            add_list_of_widgets(list_of_devices["clients"])
+            print("server") 
+            # Zmienić to później
 
 
     def clear_history(self):
@@ -400,22 +526,32 @@ class MainFrame(GridLayout):
 
             try:
                 self.receiver.receive_socket.close()
-
-            except Exception as e:
+            except:
                 pass
 
-
             self.clear_history()
-            self.create_settings_frame()
-
+            self.content.clear_widgets()
 
         else:
             self.mode = 'server'
 
+            try:
+                self.sender.s.close()
+            except:
+                pass
+
             self.clear_history()
-            self.create_settings_frame()
+            self.content.clear_widgets()
 
         self.refresh_list()
+
+    def add_host(self):
+        
+        self.files_manage_bar.clear_widgets()
+        self.content.clear_widgets()
+
+    def remove_host(self):
+        pass
 
 class GuiApp(App):
 
