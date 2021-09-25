@@ -1,3 +1,4 @@
+from re import A
 from kivy.app import App
 from kivy.uix.gridlayout import GridLayout
 from kivy.uix.boxlayout import BoxLayout
@@ -61,7 +62,7 @@ class ContentFrame(BoxLayout):
         self.spacing = 25
         self.padding = (50, 50, 150, 100)
         self.input_fields = []
-        self.last_string = ""
+        self.last_string = ["","",""]
 
         if content_type == "Add host":
             self.host_addition()
@@ -80,23 +81,57 @@ class ContentFrame(BoxLayout):
             grid.cols = 2
             grid.add_widget(widget_1)
             grid.add_widget(widget_2)
-            self.add_widget(grid)
+            self.add_widget(grid),
 
         def validate(instance, value):
+
+            def block_previous(num):
+                last_str_len = len(self.last_string[num])
+                text_len = len(instance.text)
+                print("dsads")
+                if last_str_len != 0:
+
+                    if text_len == 1:
+                        self.last_string[num] = ""
+                        instance.text == ""
+
+                    else:
+                        
+                        for i in range(0,last_str_len):
+                
+                            if last_str_len > text_len:
+                                self.last_string[num] = instance.text
+                                return True
+
+                            elif instance.text[i] != self.last_string[num][i]:
+                                instance.text = self.last_string[num]
+                            
+                else:
+                    return False
+
 
             if len(value) > 0:
                 char = value[-1]
 
                 if instance.id == "name_text":
 
+                    if block_previous(0):
+                        return
+
                     if char.isalpha() or char.isdigit() or char in ("_"," "):
 
                         if len(value) > 20:
                             instance.text = instance.text[:-1]
+                        else:
+                            self.last_string[0] = instance.text
+                            
                     else:
                         instance.text = instance.text[:-1]
 
                 elif instance.id == "ip_address_text":
+
+                    if block_previous(1):
+                        return
 
                     if char.isdigit() or char == ".":
                     
@@ -123,21 +158,28 @@ class ContentFrame(BoxLayout):
                                 if dig_counter > 3 or dot_counter > 3:
                                     instance.text = instance.text[:-1]
                                     break
+                                else:
+                                    self.last_string[1] = instance.text
+
                 
                     else:
                         instance.text = instance.text[:-1]
 
                 elif instance.id == "port_text":
+
+                    if block_previous(2):
+                        return
                     if char.isdigit():
                         
                         if len(value) > 5:
                             instance.text = instance.text[:-1]
+                        else:
+                            self.last_string[2] = instance.text
 
                     else:
                         instance.text = instance.text[:-1]
 
-                        
-
+            
         grid = GridLayout()
         grid.cols = 2
 
@@ -170,20 +212,24 @@ class ContentFrame(BoxLayout):
         self.input_fields.append(port_text)
 
         add_grid(Label(text="Port", color=(0,0,0,1), font_size='25sp'),port_text)
-
         add_grid(Label(text=""),Button(text="Add", color=(0,0,0,1), font_size='25sp', on_release= lambda a: self.on_button_click()))
 
     def on_button_click(self):
 
-        write_new_host(self.input_fields[0].text,
-                        self.input_fields[1].text,
-                        int(self.input_fields[2].text))
+        if len(self.input_fields[0].text) == 0:
+            return False
+        elif len(self.input_fields[1].text) == 0:
+            return False
+        elif len(self.input_fields[2].text) == 0:
+            return False
+        else:
+            write_new_host(self.input_fields[0].text,
+                            self.input_fields[1].text,
+                            int(self.input_fields[2].text))
 
     def settings(self):
 
-        self.add_widget(Label(text="settings", color=(0,0,0,1)))
-        self.add_widget(Label(text="settings", color=(0,0,0,1)))
-
+        self.add_widget(Label(text="This is place for future settings", color=(0,0,0,1)))
 
 class MainFrame(GridLayout):
 
@@ -217,15 +263,16 @@ class MainFrame(GridLayout):
         self.add_widget(self.left_up_grid_layout)
 
         self.left_up_grid_layout.add_widget(Button(text = "Refresh", 
-                    color =(0, 0, 0, 1), 
+                    color =(1, 1, 1, 1), 
                     background_normal = '', 
-                    background_color = (0.65,0,0,1), 
+                    background_color = (0,0.2,0.65,0.9), 
                     pos_hint = (0, 0),
                     on_release = lambda a: self.refresh_list()
                 ))  
         self.left_up_grid_layout.add_widget(Button(text = "Host/Client mode", 
                     color =(0, 0, 0, 1), 
                     background_normal = '', 
+                    background_color = (0.1, 0.1, 0.1, 0.05),
                     on_release = lambda a: self.change_mode()
                 ))  
 
@@ -236,68 +283,70 @@ class MainFrame(GridLayout):
 
         self.right_up_grid_layout.cols = 3
         self.right_up_grid_layout.add_widget(Button(text = "Directory", 
-                    color =(0, 0, 0, 1), 
+                    color =(1, 1, 1, 1), 
                     background_normal = '', 
-                    background_color = (0,0.65,0,1),                 
+                    background_color = (0,0,0,1),                 
                     size_hint = (1, 1), 
                     width = 50,
-                    on_release = lambda a: self.show_directiories()
+                    on_press = self.change_label_color,
+                    on_release = self.show_directiories
                 ))  
         self.right_up_grid_layout.add_widget(Button(text = "Add host", 
-                    color =(0, 0, 0, 1), 
+                    color =(1, 1, 1, 1), 
                     background_normal = '', 
-                    background_color = (0,0.65,0,1), 
+                    background_color = (0,0,0,1),    
                     size_hint = (1, 1), 
                     width = 50,
+                    on_press = self.change_label_color,
                     on_release = self.create_content_frame
                 ))      
         self.right_up_grid_layout.add_widget(Button(text = "", 
-                    color =(0, 0, 0, 1), 
+                    color =(1, 1, 1, 1), 
                     background_normal = '', 
-                    background_color = (0,0.65,0,1), 
+                    background_color = (0,0,0,1),    
                     size_hint = (1, 1), 
-                    width = 50,
-                    # on_release = self.create_content_frame
-                ))  
+                    width = 50
+                )) 
         self.right_up_grid_layout.add_widget(Button(text = "Settings", 
-                    color =(0, 0, 0, 1), 
-                    background_normal = 'data/img/options_2.png', 
-                    background_down ='data/img/options_2.png', 
-                    size_hint = (1, 1), 
-
+                    color =(1, 1, 1, 1), 
+                    background_normal = '', 
+                    background_color = (0,0,0,1),    
+                    background_down = "white", 
+                    size_hint = (1, 1),
                     width = 50,
+                    on_press = self.change_label_color,
                     on_release = self.create_content_frame
                 ))  
+        
 
-        self.left_lower_box_layout = BoxLayout(orientation='vertical')
-        self.left_lower_box_layout.size_hint = (None, 1)
-
+        self.left_lower_box_layout = GridLayout()
+        self.left_lower_box_layout.cols = 1
+        self.left_lower_box_layout.size_hint = (self.left_up_grid_layout.size_hint_x, 1)
+        self.left_lower_box_layout.width = Window.width * 0.25
         self.add_widget(self.left_lower_box_layout)
-        self.left_lower_box_layout.cols = 3
 
         self.right_lower_grid_layout = GridLayout()
         self.right_lower_grid_layout.cols = 1
-        self.right_lower_grid_layout.size_hint = (1, 1) # co to robi
+        self.right_lower_grid_layout.size_hint = (1, 1) 
 
         self.add_widget(self.right_lower_grid_layout)
 
         self.files_manage_bar = GridLayout(size_hint_y=None, height=100, cols=2,rows=1)
 
-
         self.right_lower_grid_layout.add_widget(self.files_manage_bar)
-
-        self.refresh_list()
+        self.refresh_list("Start")
 
         self.content = GridLayout(size_hint_y=None)
-
         self.content.size_hint = (1,1)
         self.content.cols = 1
 
         self.right_lower_grid_layout.add_widget(self.content)
 
+    def change_label_color(self, instance):
+        instance.background_color = (1,0,0,1) 
 
     def create_content_frame(self,instance):
-
+        instance.background_color = (0,0,0,1) 
         self.content.clear_widgets()
         self.content.add_widget(ContentFrame(instance.text))     
 
@@ -305,14 +354,14 @@ class MainFrame(GridLayout):
 
         self.files_manage_bar.clear_widgets()
 
-        self.files_manage_bar.add_widget(Button(text = "Wyślij", 
+        self.files_manage_bar.add_widget(Button(text = "Upload", 
                     color =(0, 0, 0, 1), 
                     background_normal = '', 
                     size_hint = (1, None), 
                     on_release = lambda a: self.upload_files()
                 ))  
                 
-        self.files_manage_bar.add_widget(Button(text = "Pobierz", 
+        self.files_manage_bar.add_widget(Button(text = "Download", 
                     color =(0, 0, 0, 1), 
                     background_normal = '', 
                     size_hint = (1, None), 
@@ -435,10 +484,8 @@ class MainFrame(GridLayout):
             self.sender = None
             list_of_devices = get_devices_list()["clients"]
 
-            server_info = get_address(list_of_devices)
-
             self.receiver = FileReceiver()
-            self.receiver.accept_connections(self.ip_address,server_info[1])
+            self.receiver.accept_connections(self.ip_address,4888)
 
         else:
 
@@ -474,11 +521,21 @@ class MainFrame(GridLayout):
         if f_paths != "":
             self.sender.send_files(f_paths)
 
-    def show_directiories(self):
+    def show_directiories(self, instance):
+        instance.background_color = (0,0,0,1)
         if self.sender != None:
             self.change_path("restore")
 
-    def refresh_list(self):
+    def stop_server(self):
+
+        try:
+            self.receiver.receive_socket.close()
+            self.clear_history()
+        except:
+            pass 
+        
+
+    def refresh_list(self,*args):
 
         def add_list_of_widgets(devices):
 
@@ -486,10 +543,9 @@ class MainFrame(GridLayout):
                 for device in devices:
                     self.left_lower_box_layout.add_widget(Button(text = device, 
                             color = (0, 0, 0, 1), 
-                            background_normal = '', 
+                            background_color = (0.1, 0.1, 0.1, 0.05),
                             size_hint = (1, 1), 
                             pos_hint = {"x":0.35, "y":0.3},
-                            width = 50,
                             on_press = self.connection
                         ))  
 
@@ -497,17 +553,34 @@ class MainFrame(GridLayout):
         self.left_lower_box_layout.clear_widgets()
         list_of_devices = get_devices_list()
 
-        if self.mode == 'client':
+        if self.mode == 'server':
+            
+            if args[0] == "Start":
 
-            add_list_of_widgets(list_of_devices["clients"])
-            print("client")
+                self.left_lower_box_layout.add_widget(Button(text = "Start", 
+                        color = (0, 0, 0, 1), 
+                        background_normal = '', 
+                        background_color = (0.1, 0.1, 0.1, 0.05),
+                        size_hint = (1, 1), 
+                        pos_hint = {"x":0.35, "y":0.3},
+                        width = 50,
+                        on_press = self.connection
+                    ))  
+            elif args[0] == "Stop":
+
+                self.left_lower_box_layout.add_widget(Button(text = "Stop", 
+                        color = (0, 0, 0, 1), 
+                        background_normal = '', 
+                        background_color = (0.1, 0.1, 0.1, 0.05),
+                        size_hint = (1, 1), 
+                        pos_hint = {"x":0.35, "y":0.3},
+                        width = 50,
+                        on_press = self.stop_server
+                    ))                 
 
         else:
 
             add_list_of_widgets(list_of_devices["clients"])
-            print("server") 
-            # Zmienić to później
-
 
     def clear_history(self):
 
@@ -518,11 +591,11 @@ class MainFrame(GridLayout):
         self.current_path = ""
         self.files_to_download = set()
 
-
     def change_mode(self):
 
         if self.mode == 'server':
             self.mode = 'client'
+            print("client")
 
             try:
                 self.receiver.receive_socket.close()
@@ -531,19 +604,21 @@ class MainFrame(GridLayout):
 
             self.clear_history()
             self.content.clear_widgets()
+            self.refresh_list()
 
         else:
             self.mode = 'server'
+            print("server")
 
             try:
                 self.sender.s.close()
             except:
                 pass
-
+            
             self.clear_history()
             self.content.clear_widgets()
 
-        self.refresh_list()
+            self.refresh_list("Start")
 
     def add_host(self):
         

@@ -197,9 +197,7 @@ class FileReceiver:
 
     def send_error(self):
             pass
-    
 
-        
 
 class FileSender:
 
