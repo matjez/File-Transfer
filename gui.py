@@ -4,23 +4,16 @@ from kivy.uix.gridlayout import GridLayout
 from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.label import Label
 from kivy.uix.button import Button
-from kivy.uix.checkbox import CheckBox
 from kivy.uix.textinput import TextInput
-from kivy.config import Config
 from kivy.core.window import Window
-from kivy.lang import Builder
 from kivy.uix.scrollview import ScrollView
 from kivy.uix.dropdown import DropDown 
-
-from subprocess import Popen, PIPE
 from threading import Thread
 from tkinter import filedialog, Tk
-
-import sys
-import ast
-
 from app import FileReceiver, FileSender
+
 from system_info import get_devices_list, get_local_ip, write_new_host
+import ast
 
 class FileUploadDialog(Thread):
 
@@ -40,7 +33,6 @@ class Directory(Button):
         Button.__init__(self, **kwargs)
         self.register_event_type('on_double_press')
 
-
         if kwargs.get("on_double_press") is not None:
             self.bind(on_double_press=kwargs.get("on_double_press"))
 
@@ -48,9 +40,10 @@ class Directory(Button):
         if touch.is_double_tap and self.collide_point(touch.x, touch.y):
             self.dispatch('on_double_press', touch)
             return True
-        return Button.on_touch_down(self, touch)
-    def on_double_press(self, *args):
 
+        return Button.on_touch_down(self, touch)
+
+    def on_double_press(self, *args):
         pass
 
 class ContentFrame(BoxLayout):
@@ -76,7 +69,6 @@ class ContentFrame(BoxLayout):
     def host_addition(self):
 
         def add_grid(widget_1, widget_2):
-
             grid = GridLayout()
             grid.cols = 2
             grid.add_widget(widget_1)
@@ -88,53 +80,45 @@ class ContentFrame(BoxLayout):
             def block_previous(num):
                 last_str_len = len(self.last_string[num])
                 text_len = len(instance.text)
-                print("dsads")
-                if last_str_len != 0:
 
+                if last_str_len != 0:
                     if text_len == 1:
                         self.last_string[num] = ""
                         instance.text == ""
 
                     else:
-                        
                         for i in range(0,last_str_len):
-                
                             if last_str_len > text_len:
                                 self.last_string[num] = instance.text
                                 return True
 
                             elif instance.text[i] != self.last_string[num][i]:
                                 instance.text = self.last_string[num]
-                            
+                        
                 else:
                     return False
-
 
             if len(value) > 0:
                 char = value[-1]
 
                 if instance.id == "name_text":
-
                     if block_previous(0):
                         return
 
                     if char.isalpha() or char.isdigit() or char in ("_"," "):
-
                         if len(value) > 20:
                             instance.text = instance.text[:-1]
                         else:
                             self.last_string[0] = instance.text
-                            
+                
                     else:
                         instance.text = instance.text[:-1]
 
                 elif instance.id == "ip_address_text":
-
                     if block_previous(1):
                         return
 
                     if char.isdigit() or char == ".":
-                    
                         if len(value) > 15:
                             instance.text = instance.text[:-1]
 
@@ -147,7 +131,6 @@ class ContentFrame(BoxLayout):
                             dot_counter = 0
 
                             for c in instance.text[::-1]: # loop reversed value
-
                                 if c.isdigit():
                                     dig_counter += 1
 
@@ -161,16 +144,14 @@ class ContentFrame(BoxLayout):
                                 else:
                                     self.last_string[1] = instance.text
 
-                
                     else:
                         instance.text = instance.text[:-1]
 
                 elif instance.id == "port_text":
-
                     if block_previous(2):
                         return
+
                     if char.isdigit():
-                        
                         if len(value) > 5:
                             instance.text = instance.text[:-1]
                         else:
@@ -189,8 +170,8 @@ class ContentFrame(BoxLayout):
         name_text.size_hint_y = 0.5
         name_text.font_size = name_text.height * 0.3
         name_text.bind(text=validate)
-        self.input_fields.append(name_text)
 
+        self.input_fields.append(name_text)
         add_grid(Label(text="Name", color=(0,0,0,1), font_size='25sp'),name_text)
 
         ip_address_text = TextInput(id="ip_address_text")
@@ -199,8 +180,8 @@ class ContentFrame(BoxLayout):
         ip_address_text.size_hint_y = 0.5
         ip_address_text.font_size = name_text.height * 0.3
         ip_address_text.bind(text=validate)
-        self.input_fields.append(ip_address_text)
 
+        self.input_fields.append(ip_address_text)
         add_grid(Label(text="Ip address", color=(0,0,0,1), font_size='25sp'),ip_address_text)
 
         port_text = TextInput(id="port_text")
@@ -209,8 +190,8 @@ class ContentFrame(BoxLayout):
         port_text.size_hint_y = 0.5
         port_text.font_size = name_text.height * 0.3
         port_text.bind(text=validate)
-        self.input_fields.append(port_text)
 
+        self.input_fields.append(port_text)
         add_grid(Label(text="Port", color=(0,0,0,1), font_size='25sp'),port_text)
         add_grid(Label(text=""),Button(text="Add", color=(0,0,0,1), font_size='25sp', on_release= lambda a: self.on_button_click()))
 
@@ -218,10 +199,13 @@ class ContentFrame(BoxLayout):
 
         if len(self.input_fields[0].text) == 0:
             return False
+
         elif len(self.input_fields[1].text) == 0:
             return False
+
         elif len(self.input_fields[2].text) == 0:
             return False
+
         else:
             write_new_host(self.input_fields[0].text,
                             self.input_fields[1].text,
@@ -229,7 +213,17 @@ class ContentFrame(BoxLayout):
 
     def settings(self):
 
-        self.add_widget(Label(text="This is place for future settings", color=(0,0,0,1)))
+        settings_grid = GridLayout()
+        settings_grid.rows = 8
+        settings_grid.size_hint = (1,1)
+
+        settings_grid.add_widget(Label(text="Clear hosts list.", color=(0,0,0,1), size_hint=(None,1)))
+        settings_grid.add_widget(Button(text="Clear", color=(0,0,0,1), size_hint=(None,None),height=10, on_release= lambda a: self.on_button_click()))
+        settings_grid.add_widget(Label(text="This is place for future settings", color=(0,0,0,1)))
+        settings_grid.add_widget(Label(text="This is place for future settings", color=(0,0,0,1)))
+        settings_grid.add_widget(Label(text="This is place for future settings", color=(0,0,0,1)))
+        
+        self.add_widget(settings_grid)
 
 class MainFrame(GridLayout):
 
@@ -317,7 +311,6 @@ class MainFrame(GridLayout):
                     on_press = self.change_label_color,
                     on_release = self.create_content_frame
                 ))  
-        
 
         self.left_lower_box_layout = GridLayout()
         self.left_lower_box_layout.cols = 1
@@ -351,9 +344,7 @@ class MainFrame(GridLayout):
         self.content.add_widget(ContentFrame(instance.text))     
 
     def create_remote_paths_frame(self,first_iteration=False):
-
         self.files_manage_bar.clear_widgets()
-
         self.files_manage_bar.add_widget(Button(text = "Upload", 
                     color =(0, 0, 0, 1), 
                     background_normal = '', 
@@ -371,19 +362,15 @@ class MainFrame(GridLayout):
         self.content.clear_widgets()
         self.scroll_view = ScrollView()
 
-
-
         self.content_scroll_view = GridLayout(size_hint_y=None, row_default_height=60, cols=1)
         self.content_scroll_view.bind(minimum_height=self.content_scroll_view.setter('height'))
 
         paths = self.sender.get_directories(self.current_path).decode()
         paths = ast.literal_eval(paths) 
 
-
         dropdown = DropDown() 
 
         if first_iteration == True:
-
             self.drives = paths
             current_drive = paths[0]
             self.current_path = current_drive
@@ -402,17 +389,12 @@ class MainFrame(GridLayout):
             dropdown.add_widget(btn) 
         
         mainbutton = Button(text = current_drive, size_hint =(1, None), pos =(350, 300)) 
-
         mainbutton.bind(on_release = dropdown.open) 
 
         dropdown.bind(on_select = lambda instance, x: setattr(mainbutton, 'text', x)) 
-
         self.content.add_widget(mainbutton)
 
-        
-
         for path in paths:
-
             path = path.split("\\")
         
             self.content_scroll_view.add_widget(Directory(text = path[-1], 
@@ -427,32 +409,30 @@ class MainFrame(GridLayout):
         self.content.add_widget(self.scroll_view)
 
     def change_drive(self, instance):
-
         self.current_path = ""
         self.change_path(instance.text)
 
     def change_path(self,*args,change_drive=False):
 
         if type(args[0]) == str:
-            
-
             if args[0] == "":
                 self.current_path += args[0]
                 self.create_remote_paths_frame(first_iteration=True)
+
             elif args[0] == "restore":
                 self.create_remote_paths_frame(first_iteration=False)
+
             else:
                 self.current_path += args[0]
                 self.create_remote_paths_frame(first_iteration=False)
         else:   
             self.current_path += args[0].text + "\\"
-            
+
             self.create_remote_paths_frame(self.current_path)
 
         self.files_to_download = set()
 
     def select_files(self,instance):
-
         path = self.current_path + instance.text
 
         if path in self.files_to_download:            
@@ -472,9 +452,7 @@ class MainFrame(GridLayout):
     def _connection(self,instance):
 
         def get_address(list_of_devices):
-            
             for name in list_of_devices:
-
                 if name == instance.text:
                     res = list_of_devices[name]
 
@@ -488,7 +466,6 @@ class MainFrame(GridLayout):
             self.receiver.accept_connections(self.ip_address,4888)
 
         else:
-
             if self.sender == None: 
                 
                 self.receiver = None
@@ -538,7 +515,6 @@ class MainFrame(GridLayout):
     def refresh_list(self,*args):
 
         def add_list_of_widgets(devices):
-
             if len(devices) > 0: 
                 for device in devices:
                     self.left_lower_box_layout.add_widget(Button(text = device, 
@@ -595,7 +571,6 @@ class MainFrame(GridLayout):
 
         if self.mode == 'server':
             self.mode = 'client'
-            print("client")
 
             try:
                 self.receiver.receive_socket.close()
@@ -608,7 +583,6 @@ class MainFrame(GridLayout):
 
         else:
             self.mode = 'server'
-            print("server")
 
             try:
                 self.sender.s.close()
@@ -621,7 +595,6 @@ class MainFrame(GridLayout):
             self.refresh_list("Start")
 
     def add_host(self):
-        
         self.files_manage_bar.clear_widgets()
         self.content.clear_widgets()
 
